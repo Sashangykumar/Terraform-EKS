@@ -31,7 +31,7 @@ jobs:
 
       - name: Terraform Init
         run: |
-          terraform init \
+          terraform init -upgrade \
             -backend-config="bucket=vk-terraform-state-20250918" \
             -backend-config="dynamodb_table=terraform-locks" \
             -backend-config="region=us-east-1" \
