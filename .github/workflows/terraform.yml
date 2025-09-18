@@ -12,28 +12,24 @@ permissions:
 
 jobs:
   terraform:
-    name: Deploy Terraform to AWS
+    name: Terraform Plan
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Configure AWS credentials (using OIDC recommended)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::100025280701:role/Workflows
           aws-region: us-east-1
 
-      # Step 3: Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.5
 
-      # Step 4: Terraform Init (with backend S3 + DynamoDB)
       - name: Terraform Init
         run: |
           terraform init \
@@ -42,15 +38,60 @@ jobs:
             -backend-config="region=us-east-1" \
             -backend-config="key=terraform.tfstate"
 
-      # Step 5: Terraform Validate
       - name: Terraform Validate
         run: terraform validate
 
-      # Step 6: Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan
 
-      # Step 7: Terraform Apply (only on main push)
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: terraform
+    environment:
+      name: production  # <-- Set up an environment called 'production' in GitHub with required reviewers
+      url: https://aws.amazon.com/console/
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::100025280701:role/Workflows
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve tfplan
+
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    needs: terraform
+    environment:
+      name: production  # <-- same manual approval environment
+      url: https://aws.amazon.com/console/
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::100025280701:role/Workflows
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
