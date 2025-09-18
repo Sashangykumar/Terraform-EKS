@@ -34,12 +34,7 @@ jobs:
 
       # Terraform Init
       - name: Terraform Init
-        run: terraform init -upgrade \
-          -backend-config="bucket=vk-terraform-state-20250918" \
-          -backend-config="dynamodb_table=terraform-locks" \
-          -backend-config="region=us-east-1" \
-          -backend-config="key=terraform.tfstate"
-
+        run: terraform init
       # Terraform Validate
       - name: Terraform Validate
         run: terraform validate
